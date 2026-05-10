@@ -1,0 +1,39 @@
+# 依赖（各子目录）
+node_modules/
+**/node_modules/
+
+# 环境变量与密钥（勿提交真实值）
+.env
+.env.local
+
+# 日志与调试
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 编辑器（个人本地配置可自行取消注释）
+# .vscode/
+# *.code-workspace
+
+# 微信小程序：本机/隐私相关配置，易冲突
+project.private.config.json
+
+# 小程序 npm 构建产物（若使用 npm 包）
+miniprogram_npm/
+
+# 常见构建与缓存
+dist/
+build/
+.cache/
+*.tsbuildinfo
+
+# 测试覆盖率
+coverage/
+
+# 本地整包备份（体积大）
+backups/

@@ -1,0 +1,13 @@
+{
+  "name": "chenglaizi-server",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start:clean": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$c=Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue; if($c){$pids=@($c | Select-Object -ExpandProperty OwningProcess -Unique); foreach($id in $pids){Stop-Process -Id $id -Force -ErrorAction SilentlyContinue}}\" && node index.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

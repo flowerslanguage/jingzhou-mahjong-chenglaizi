@@ -1,0 +1,48 @@
+{
+    "appid": "wx6d15c38729d994de",
+    "projectname": "mahjong-mvp-mini-game",
+    "miniprogramRoot": "./",
+    "cloudfunctionRoot": "cloudfunctions/",
+    "compileType": "game",
+    "setting": {
+        "urlCheck": false,
+        "es6": true,
+        "enhance": true,
+        "showShadowRootInWxmlPanel": true,
+        "useCompilerModule": true,
+        "postcss": false,
+        "compileWorklet": false,
+        "minified": false,
+        "uglifyFileName": false,
+        "uploadWithSourceMap": true,
+        "packNpmManually": false,
+        "packNpmRelationList": [],
+        "minifyWXSS": true,
+        "minifyWXML": true,
+        "localPlugins": false,
+        "disableUseStrict": false,
+        "useCompilerPlugins": false,
+        "condition": false,
+        "swc": false,
+        "disableSWC": true,
+        "babelSetting": {
+            "ignore": [],
+            "disablePlugins": [],
+            "outputPath": ""
+        }
+    },
+    "condition": {
+        "game": {
+            "current": -1,
+            "list": []
+        }
+    },
+    "simulatorPluginLibVersion": {},
+    "packOptions": {
+        "ignore": [],
+        "include": []
+    },
+    "isGameTourist": false,
+    "editorSetting": {},
+    "libVersion": "3.14.3"
+}
