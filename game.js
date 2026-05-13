@@ -1,13 +1,16 @@
 // 引入麻将游戏逻辑层模块，包含游戏规则、牌型定义、核心算法等
-const { createMahjongGame, tileGlyph, tileName, TILE_KIND_COUNT } = require("./logic.js");
+const {
+  createMahjongGame,
+  tileGlyph,
+  tileName,
+  TILE_KIND_COUNT,
+} = require("./logic.js");
 const { createMultiplayerClient } = require("./client/multiplayer.js");
 
 // 开启真机调试面板
 wx.setEnableDebug({
   enableDebug: true,
 });
-
-
 
 // 创建微信小游戏 Canvas 实例，作为游戏绘制载体
 const canvas = wx.createCanvas();
@@ -23,7 +26,8 @@ let SCREEN_H = 667;
 let CANVAS_DPR = 2;
 /** 微信胶囊位置（用于右上角按钮避让）；随 applyCanvasLayout 刷新 */
 let menuButtonRect =
-  typeof wx !== "undefined" && typeof wx.getMenuButtonBoundingClientRect === "function"
+  typeof wx !== "undefined" &&
+  typeof wx.getMenuButtonBoundingClientRect === "function"
     ? wx.getMenuButtonBoundingClientRect()
     : null;
 
@@ -165,7 +169,10 @@ function readLayoutSystemInfo() {
       s = {};
     }
   }
-  if ((!Number(s.windowWidth) || !Number(s.windowHeight)) && typeof wx.getSystemInfoSync === "function") {
+  if (
+    (!Number(s.windowWidth) || !Number(s.windowHeight)) &&
+    typeof wx.getSystemInfoSync === "function"
+  ) {
     s = { ...(wx.getSystemInfoSync() || {}), ...s };
   }
   let w = Number(s.windowWidth) || 0;
@@ -211,7 +218,10 @@ function applyCanvasLayout(reason) {
     }
     canvas.width = SCREEN_W * CANVAS_DPR;
     canvas.height = SCREEN_H * CANVAS_DPR;
-    if (typeof wx !== "undefined" && typeof wx.getMenuButtonBoundingClientRect === "function") {
+    if (
+      typeof wx !== "undefined" &&
+      typeof wx.getMenuButtonBoundingClientRect === "function"
+    ) {
       try {
         menuButtonRect = wx.getMenuButtonBoundingClientRect();
       } catch (e) {
@@ -305,7 +315,10 @@ function ensureLobbyBaseStakeLoaded() {
 function persistLobbyPreferredBaseStake() {
   if (typeof wx === "undefined") return;
   try {
-    wx.setStorageSync(STORAGE_KEYS.LOBBY_BASE_STAKE, String(lobbyPreferredBaseStake));
+    wx.setStorageSync(
+      STORAGE_KEYS.LOBBY_BASE_STAKE,
+      String(lobbyPreferredBaseStake),
+    );
   } catch (e) {
     /* ignore */
   }
@@ -331,7 +344,8 @@ let chengCountByRealSeat = { 0: 0, 1: 0, 2: 0, 3: 0 };
 
 function getAvatarImage(url) {
   const key = String(url || "").trim();
-  if (!key || typeof wx === "undefined" || typeof wx.createImage !== "function") return null;
+  if (!key || typeof wx === "undefined" || typeof wx.createImage !== "function")
+    return null;
   const cached = avatarImageCache.get(key);
   if (cached) return cached.ok ? cached.img : null;
   const img = wx.createImage();
@@ -354,7 +368,8 @@ function getAvatarImage(url) {
 function getTileImage(typeIdx) {
   const n = Number(typeIdx);
   if (!Number.isFinite(n) || n < 0 || n >= TILE_KIND_COUNT) return null;
-  if (typeof wx === "undefined" || typeof wx.createImage !== "function") return null;
+  if (typeof wx === "undefined" || typeof wx.createImage !== "function")
+    return null;
   const key = `tile:${n}`;
   const cached = tileImageCache.get(key);
   if (cached) return cached.ok ? cached.img : null;
@@ -364,7 +379,12 @@ function getTileImage(typeIdx) {
     tileImageCache.set(key, { img, ok: true, loading: false });
   };
   img.onerror = () => {
-    tileImageCache.set(key, { img: null, ok: false, failed: true, loading: false });
+    tileImageCache.set(key, {
+      img: null,
+      ok: false,
+      failed: true,
+      loading: false,
+    });
   };
   img.src = `images/tiles/${n}.jpg`;
   return null;
@@ -622,7 +642,10 @@ function extractPendingJoinFromLaunch() {
         ? wx.getEnterOptionsSync() || {}
         : {};
     const opts = {
-      query: { ...asQueryRecord(launchOpts.query), ...asQueryRecord(enterOpts.query) },
+      query: {
+        ...asQueryRecord(launchOpts.query),
+        ...asQueryRecord(enterOpts.query),
+      },
       path: String(enterOpts.path || launchOpts.path || "").trim(),
       scene: enterOpts.scene || launchOpts.scene || "",
     };
@@ -637,7 +660,10 @@ function extractPendingJoinFromLaunch() {
     });
     if (roomNo) prepareJoinSharedRoom(roomNo);
   } catch (err) {
-    shareLog("entry.coldStart.error", String(err && err.message ? err.message : err));
+    shareLog(
+      "entry.coldStart.error",
+      String(err && err.message ? err.message : err),
+    );
   }
 }
 
@@ -654,7 +680,10 @@ function refreshPendingJoinFromRuntime() {
         ? wx.getLaunchOptionsSync() || {}
         : {};
     const opts = {
-      query: { ...asQueryRecord(launchOpts.query), ...asQueryRecord(enterOpts.query) },
+      query: {
+        ...asQueryRecord(launchOpts.query),
+        ...asQueryRecord(enterOpts.query),
+      },
       path: String(enterOpts.path || launchOpts.path || "").trim(),
       scene: enterOpts.scene || launchOpts.scene || "",
     };
@@ -669,7 +698,10 @@ function refreshPendingJoinFromRuntime() {
     });
     if (roomNo) prepareJoinSharedRoom(roomNo);
   } catch (err) {
-    shareLog("entry.runtimeRefresh.error", String(err && err.message ? err.message : err));
+    shareLog(
+      "entry.runtimeRefresh.error",
+      String(err && err.message ? err.message : err),
+    );
   }
 }
 
@@ -691,9 +723,12 @@ function parseRoomNoFromScene(sceneValue) {
 
 /** 从 querystring/path 中解析 roomNo（兼容 roomNo/roomno） */
 function parseRoomNoFromQueryString(rawQuery) {
-  const qs = String(rawQuery || "").trim().replace(/^\?/, "");
+  const qs = String(rawQuery || "")
+    .trim()
+    .replace(/^\?/, "");
   if (!qs) return "";
-  const m = qs.match(/(?:^|&)roomNo=([^&]+)/i) || qs.match(/(?:^|&)roomno=([^&]+)/i);
+  const m =
+    qs.match(/(?:^|&)roomNo=([^&]+)/i) || qs.match(/(?:^|&)roomno=([^&]+)/i);
   if (!m || !m[1]) return "";
   try {
     return String(decodeURIComponent(m[1])).trim();
@@ -782,7 +817,8 @@ function buildMergedEnterOptsFromShow(surfaceRes) {
     return "";
   };
   const scene = pickScene(r.scene, enter.scene, launch.scene);
-  const referrerInfo = r.referrerInfo || enter.referrerInfo || launch.referrerInfo;
+  const referrerInfo =
+    r.referrerInfo || enter.referrerInfo || launch.referrerInfo;
   return { query, path, scene, referrerInfo };
 }
 
@@ -806,7 +842,12 @@ function prepareJoinSharedRoom(roomNo) {
 
 /** 初始化微信云开发 SDK（绑定 env 与 traceUser） */
 function initCloud() {
-  if (typeof wx === "undefined" || !wx.cloud || typeof wx.cloud.init !== "function") return;
+  if (
+    typeof wx === "undefined" ||
+    !wx.cloud ||
+    typeof wx.cloud.init !== "function"
+  )
+    return;
   try {
     const cfg = { traceUser: true };
     if (CLOUD_ENV_ID) cfg.env = CLOUD_ENV_ID;
@@ -893,7 +934,10 @@ function initEntryFlow() {
         mergedQueryKeys: Object.keys(merged.query || {}),
         mergedQuery: merged.query,
         mergedPath: merged.path || null,
-        mergedScene: merged.scene !== "" && merged.scene !== undefined ? merged.scene : null,
+        mergedScene:
+          merged.scene !== "" && merged.scene !== undefined
+            ? merged.scene
+            : null,
         parsedRoomNo: roomNo || null,
       });
       if (roomNo) prepareJoinSharedRoom(roomNo);
@@ -943,7 +987,12 @@ function buildSharePayload() {
     title = inviter ? `${inviter} 邀你打荆州麻将` : "荆州麻将 · 逞癞子";
     query = "";
   }
-  shareLog("payload.build", { title, query, roomNo: roomNo || null, inviter: inviter || null });
+  shareLog("payload.build", {
+    title,
+    query,
+    roomNo: roomNo || null,
+    inviter: inviter || null,
+  });
   return { title, query };
 }
 
@@ -979,7 +1028,9 @@ function registerShareListeners() {
       }
     });
   } else {
-    console.warn("[share] wx.onShareAppMessage 不存在，无法监听转发（请查基础库与后台「分享给朋友」能力）");
+    console.warn(
+      "[share] wx.onShareAppMessage 不存在，无法监听转发（请查基础库与后台「分享给朋友」能力）",
+    );
   }
   if (typeof wx.onShareTimeline === "function") {
     wx.onShareTimeline((res) => {
@@ -1028,13 +1079,21 @@ function openRoomQrFor(roomNo) {
       const qrUrl = data?.qrImageUrl;
       const inviteUrl = data?.inviteUrl || "";
       const mode = data?.mode || "invite";
-      if (typeof wx !== "undefined" && qrUrl && typeof wx.previewImage === "function") {
+      if (
+        typeof wx !== "undefined" &&
+        qrUrl &&
+        typeof wx.previewImage === "function"
+      ) {
         wx.previewImage({
           current: qrUrl,
           urls: [qrUrl],
         });
       }
-      if (typeof wx !== "undefined" && typeof wx.setClipboardData === "function" && inviteUrl) {
+      if (
+        typeof wx !== "undefined" &&
+        typeof wx.setClipboardData === "function" &&
+        inviteUrl
+      ) {
         wx.setClipboardData({ data: inviteUrl });
       }
       if (mode === "room_no_only") {
@@ -1117,7 +1176,10 @@ function syncBotHandsFromPayload(payload) {
   for (let localIdx = 1; localIdx <= 3; localIdx += 1) {
     const pl = game.players[localIdx];
     if (!pl) continue;
-    if (DEBUG_BOT_HANDS_ONLY_LOCAL != null && localIdx !== DEBUG_BOT_HANDS_ONLY_LOCAL) {
+    if (
+      DEBUG_BOT_HANDS_ONLY_LOCAL != null &&
+      localIdx !== DEBUG_BOT_HANDS_ONLY_LOCAL
+    ) {
       pl.hand = [];
       continue;
     }
@@ -1173,7 +1235,10 @@ function applyServerGameStart(payload) {
     ? realSeatToLocalSeat[payload.currentSeat]
     : 0;
   game.winnerExposeHand = null;
-  if (Array.isArray(payload?.winnerExposeHand) && payload.winnerExposeHand.length > 0) {
+  if (
+    Array.isArray(payload?.winnerExposeHand) &&
+    payload.winnerExposeHand.length > 0
+  ) {
     game.winnerExposeHand = cloneTileListForView(payload.winnerExposeHand);
   }
   const startSeq = Number(payload?.seq || 0);
@@ -1241,7 +1306,9 @@ function applyServerGameStart(payload) {
     game.huTypeLabel = "";
   }
   latestChengHint = "";
-  chengCountByRealSeat = { ...(payload?.chengCountBySeat || { 0: 0, 1: 0, 2: 0, 3: 0 }) };
+  chengCountByRealSeat = {
+    ...(payload?.chengCountBySeat || { 0: 0, 1: 0, 2: 0, 3: 0 }),
+  };
 
   syncBotHandsFromPayload(payload);
 }
@@ -1319,12 +1386,17 @@ function applyServerActionResult(payload) {
       const wl = realSeatToLocalSeat[payload.winnerSeat];
       game.winner = Number.isInteger(wl) ? wl : 0;
       game.winnerExposeHand = null;
-      if (Array.isArray(payload.winnerExposeHand) && payload.winnerExposeHand.length > 0) {
+      if (
+        Array.isArray(payload.winnerExposeHand) &&
+        payload.winnerExposeHand.length > 0
+      ) {
         game.winnerExposeHand = cloneTileListForView(payload.winnerExposeHand);
       }
       const name =
         game.players[game.winner]?.name || `座位${payload.winnerSeat}`;
-      const huLabel = String(payload.huSettlement?.label || "").trim() || parseHuTypeLabelFromStatus(payload.status);
+      const huLabel =
+        String(payload.huSettlement?.label || "").trim() ||
+        parseHuTypeLabelFromStatus(payload.status);
       game.huTypeLabel = huLabel;
       game.status = huLabel
         ? `${name} 胡牌（${huLabel}），本局结束`
@@ -1346,7 +1418,10 @@ function applyServerActionResult(payload) {
   if (String(payload?.status || "").includes("逞")) {
     latestChengHint = String(payload.status || "").replace("，请出牌", "");
   }
-  if (payload?.chengCountBySeat && typeof payload.chengCountBySeat === "object") {
+  if (
+    payload?.chengCountBySeat &&
+    typeof payload.chengCountBySeat === "object"
+  ) {
     chengCountByRealSeat = { ...payload.chengCountBySeat };
   }
 
@@ -1375,7 +1450,10 @@ function applyServerActionResult(payload) {
   if (Array.isArray(payload.discardHistory)) {
     discardHistoryView = payload.discardHistory.slice();
   } else if (payload.discardTile && Number.isInteger(payload.actorSeat)) {
-    discardHistoryView.push({ seat: payload.actorSeat, tile: payload.discardTile });
+    discardHistoryView.push({
+      seat: payload.actorSeat,
+      tile: payload.discardTile,
+    });
   }
 
   if (payload.meldsBySeat) {
@@ -1415,7 +1493,11 @@ function applyServerActionResult(payload) {
         upstream.includes("已过") ||
         upstream.includes("胡牌"));
     if (shouldStagger) {
-      scheduleDrawHintAfterUpstream(upstream, payload.selfLastDrawTileId, drawHint);
+      scheduleDrawHintAfterUpstream(
+        upstream,
+        payload.selfLastDrawTileId,
+        drawHint,
+      );
       deferDrawFlashForStagger = true;
     } else {
       game.status = drawHint;
@@ -1519,7 +1601,11 @@ multiplayer.on("actionResult", (payload) => {
 function reactionForSelfHasClickableOptions(r) {
   if (!r) return false;
   if (r.canPeng || r.canGang || r.canHu || r.canPass) return true;
-  if (r.canAnGang && Array.isArray(r.anGangTypeIdxs) && r.anGangTypeIdxs.length > 0) {
+  if (
+    r.canAnGang &&
+    Array.isArray(r.anGangTypeIdxs) &&
+    r.anGangTypeIdxs.length > 0
+  ) {
     return true;
   }
   return false;
@@ -1563,7 +1649,10 @@ function applyGameSnapshot(payload) {
   if (String(payload?.status || "").includes("逞")) {
     latestChengHint = String(payload.status || "").replace("，请出牌", "");
   }
-  if (payload?.chengCountBySeat && typeof payload.chengCountBySeat === "object") {
+  if (
+    payload?.chengCountBySeat &&
+    typeof payload.chengCountBySeat === "object"
+  ) {
     chengCountByRealSeat = { ...payload.chengCountBySeat };
   }
   if (typeof payload.selfChengCount === "number") {
@@ -1593,7 +1682,9 @@ function applyGameSnapshot(payload) {
       const name = game.players[game.winner]?.name || "玩家";
       const huLbl = resolveHuTypeLabelFromPayload(payload);
       game.huTypeLabel = huLbl;
-      setStatus(huLbl ? `${name} 胡牌（${huLbl}），本局结束` : `${name} 胡牌，本局结束`);
+      setStatus(
+        huLbl ? `${name} 胡牌（${huLbl}），本局结束` : `${name} 胡牌，本局结束`,
+      );
     } else {
       game.huTypeLabel = "";
       setStatus(payload?.status || "流局");
@@ -1622,8 +1713,12 @@ function applyGameSnapshot(payload) {
       return;
     }
     const my = game.players[0];
-    const tile = (my?.hand || []).find((t) => t.id === payload.selfLastDrawTileId);
-    const drawHint = tile ? `已摸牌 ${tileName(tile.typeIdx)}，请出牌` : "已摸牌，请出牌";
+    const tile = (my?.hand || []).find(
+      (t) => t.id === payload.selfLastDrawTileId,
+    );
+    const drawHint = tile
+      ? `已摸牌 ${tileName(tile.typeIdx)}，请出牌`
+      : "已摸牌，请出牌";
     const upstream = String(payload?.status || game.status || "").trim();
     const shouldStagger =
       upstream &&
@@ -1634,7 +1729,11 @@ function applyGameSnapshot(payload) {
         upstream.includes("已过") ||
         upstream.includes("胡牌"));
     if (shouldStagger) {
-      scheduleDrawHintAfterUpstream(upstream, payload.selfLastDrawTileId, drawHint);
+      scheduleDrawHintAfterUpstream(
+        upstream,
+        payload.selfLastDrawTileId,
+        drawHint,
+      );
     } else {
       setStatus(drawHint);
       startDrawFlash(payload.selfLastDrawTileId);
@@ -1682,7 +1781,9 @@ function applyGameSnapshot(payload) {
     phase: game.phase,
     current: game.current,
     reaction: mjFmtReactionForLog(game.reaction),
-    selfLastDrawKeptFlash: !!(needSelfReactUi && payload?.selfLastDrawTileId != null),
+    selfLastDrawKeptFlash: !!(
+      needSelfReactUi && payload?.selfLastDrawTileId != null
+    ),
   });
 }
 
@@ -1872,9 +1973,12 @@ function drawRoomPlayersPanel() {
     },
   };
 
-  for (let seat = 0; seat < 4; seat++) {
-    const p = players.find((x) => x.seat === seat);
-    const pos = seatPos[seat];
+  for (let localSeat = 0; localSeat < 4; localSeat++) {
+    const realSeat = Array.isArray(localSeatToRealSeat)
+      ? localSeatToRealSeat[localSeat]
+      : localSeat;
+    const p = players.find((x) => x.seat === realSeat);
+    const pos = seatPos[localSeat];
     if (!pos) continue;
 
     const meTag = p && p.uid === mp.uid ? "我" : "";
@@ -1882,13 +1986,19 @@ function drawRoomPlayersPanel() {
     const nick = p ? p.nickname || "匿名" : "等待加入";
     const botTag = p && p.isBot ? " [电脑]" : "";
     const ownerTag = room && p && p.uid === room.ownerUid ? " [房主]" : "";
-    const chengTimes = Number(chengCountByRealSeat[seat] || 0);
+    const chengTimes = Number(chengCountByRealSeat[realSeat] || 0);
     const chengTag = chengTimes > 0 ? ` [逞x${chengTimes}]` : "";
+    const isCurrentDiscardPlayer =
+      inGame &&
+      game.phase === "discard" &&
+      game.current === localSeat &&
+      game.phase !== "gameover";
+    const actionTag = isCurrentDiscardPlayer ? " 出牌中" : "";
     const titleMain = `${nick}${meTag ? `(${meTag})` : ""}${ownerTag}${botTag}`;
     const localIdx =
-      realSeatToLocalSeat && Number.isInteger(realSeatToLocalSeat[seat])
-        ? realSeatToLocalSeat[seat]
-        : seat;
+      realSeatToLocalSeat && Number.isInteger(realSeatToLocalSeat[realSeat])
+        ? realSeatToLocalSeat[realSeat]
+        : localSeat;
     const scoreAmt = Number(playerScoreByLocal[localIdx] || 0);
     const readyLobbyText = p ? (p.ready ? "已准备" : "未准备") : "等待";
     const secondSeg = inGame ? `${scoreAmt}元` : readyLobbyText;
@@ -1897,11 +2007,11 @@ function drawRoomPlayersPanel() {
     // 玩家信息底板：按内容自适应宽度
     const avatarReserve = p && !p.isBot ? 28 : 0;
     ctx.font = "12px sans-serif";
-    const titleW = ctx.measureText(titleMain + chengTag).width;
+    const titleW = ctx.measureText(titleMain + chengTag + actionTag).width;
     const statusW = ctx.measureText(status).width;
     const contentW = Math.max(titleW, statusW) + avatarReserve + 18;
     let cardW = Math.max(110, Math.min(contentW, 190));
-    if (seat === 3) cardW = Math.max(104, Math.min(cardW - 12, 176));
+    if (localSeat === 3) cardW = Math.max(104, Math.min(cardW - 12, 176));
     const cardH = 40;
     let left =
       pos.align === "center"
@@ -1910,24 +2020,41 @@ function drawRoomPlayersPanel() {
           ? pos.x - cardW
           : pos.x;
     const top = pos.y - cardH / 2;
-    if (seat === 2) {
+    if (localSeat === 2) {
       left = Math.min(left, SCREEN_W - cardW - 8);
       left = Math.max(8, left);
     }
 
-    ctx.fillStyle =
-      p && p.uid === mp.uid
-        ? "rgba(255, 215, 106, 0.22)"
-        : "rgba(0, 0, 0, 0.28)";
-    ctx.fillRect(left, top, cardW, cardH);
+    ctx.save();
+    if (isCurrentDiscardPlayer) {
+      const pulse = (Math.sin(Date.now() / 260) + 1) / 2;
+      ctx.shadowColor = "rgba(255, 228, 94, 0.85)";
+      ctx.shadowBlur = 8 + pulse * 8;
+      ctx.fillStyle = "rgba(255, 215, 106, 0.30)";
+      ctx.beginPath();
+      addRoundRectPath(ctx, left, top, cardW, cardH, 8);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(255, 228, 94, ${0.72 + pulse * 0.28})`;
+      ctx.beginPath();
+      addRoundRectPath(ctx, left - 1, top - 1, cardW + 2, cardH + 2, 9);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle =
+        p && p.uid === mp.uid
+          ? "rgba(255, 215, 106, 0.22)"
+          : "rgba(0, 0, 0, 0.28)";
+      ctx.beginPath();
+      addRoundRectPath(ctx, left, top, cardW, cardH, 8);
+      ctx.fill();
+    }
+    ctx.restore();
 
     // 真人玩家显示头像；机器人保持文字样式
     if (p && !p.isBot) {
       const avatarSize = 20;
       const avatarX =
-        pos.align === "right"
-          ? left + cardW - avatarSize - 6
-          : left + 6;
+        pos.align === "right" ? left + cardW - avatarSize - 6 : left + 6;
       const avatarY = top + (cardH - avatarSize) / 2;
       const img = getAvatarImage(p.avatarUrl);
       if (img) {
@@ -1964,25 +2091,33 @@ function drawRoomPlayersPanel() {
     }
 
     const textX =
-      pos.align === "left" || pos.align === "right"
-        ? left + cardW / 2
-        : pos.x;
+      pos.align === "left" || pos.align === "right" ? left + cardW / 2 : pos.x;
     const textAlign = "center";
     ctx.textAlign = textAlign;
     ctx.textBaseline = "middle";
     ctx.font = "12px sans-serif";
-    if (!chengTag) {
+    if (!chengTag && !actionTag) {
       ctx.fillStyle = "#ffffff";
       ctx.fillText(titleMain, textX, pos.y - 8);
     } else {
       ctx.textAlign = "left";
       const mainW = ctx.measureText(titleMain).width;
-      const tagW = ctx.measureText(chengTag).width;
-      const startX = textX - (mainW + tagW) / 2;
+      const chengW = ctx.measureText(chengTag).width;
+      const actionW = ctx.measureText(actionTag).width;
+      const startX = textX - (mainW + chengW + actionW) / 2;
+      let tx = startX;
       ctx.fillStyle = "#ffffff";
-      ctx.fillText(titleMain, startX, pos.y - 8);
-      ctx.fillStyle = "#ffd35a";
-      ctx.fillText(chengTag, startX + mainW, pos.y - 8);
+      ctx.fillText(titleMain, tx, pos.y - 8);
+      tx += mainW;
+      if (chengTag) {
+        ctx.fillStyle = "#ffd35a";
+        ctx.fillText(chengTag, tx, pos.y - 8);
+        tx += chengW;
+      }
+      if (actionTag) {
+        ctx.fillStyle = "#ffe45e";
+        ctx.fillText(actionTag, tx, pos.y - 8);
+      }
       ctx.textAlign = textAlign;
     }
     const scoreColor = scoreAmt !== 0 ? "#ffd35a" : "#d7f3ff";
@@ -2154,7 +2289,10 @@ function drawHands(player) {
       const by = y - 1;
       const bw = tileW + 2;
       const bh = tileH + 2;
-      const cornerR = Math.min(12, Math.max(4, Math.floor(Math.min(bw, bh) * 0.14)));
+      const cornerR = Math.min(
+        12,
+        Math.max(4, Math.floor(Math.min(bw, bh) * 0.14)),
+      );
       ctx.strokeStyle = "#ffe45e";
       ctx.lineWidth = 3;
       ctx.shadowColor = "#ffe45e";
@@ -2227,7 +2365,11 @@ function drawDebugOpponentHands() {
   ctx.fillStyle = "rgba(255, 255, 220, 0.92)";
 
   for (let localIdx = 1; localIdx <= 3; localIdx += 1) {
-    if (DEBUG_BOT_HANDS_ONLY_LOCAL != null && localIdx !== DEBUG_BOT_HANDS_ONLY_LOCAL) continue;
+    if (
+      DEBUG_BOT_HANDS_ONLY_LOCAL != null &&
+      localIdx !== DEBUG_BOT_HANDS_ONLY_LOCAL
+    )
+      continue;
     const pl = game.players[localIdx];
     if (!pl || !pl.hand.length) continue;
 
@@ -2242,7 +2384,10 @@ function drawDebugOpponentHands() {
         const x = baseX + i * (tw + gap);
         const y = baseY;
         drawTileFace(x, y, tw, th, pl.hand[i].typeIdx);
-        if (game.laiziTypeIdx != null && pl.hand[i].typeIdx === game.laiziTypeIdx) {
+        if (
+          game.laiziTypeIdx != null &&
+          pl.hand[i].typeIdx === game.laiziTypeIdx
+        ) {
           ctx.fillStyle = "#ff0000";
           ctx.beginPath();
           ctx.arc(x + tw - 3, y + 3, 2.5, 0, Math.PI * 2);
@@ -2262,7 +2407,10 @@ function drawDebugOpponentHands() {
         const x = baseX - col * (tw + gap);
         const y = baseY + row * (th + gap);
         drawTileFace(x, y, tw, th, pl.hand[i].typeIdx);
-        if (game.laiziTypeIdx != null && pl.hand[i].typeIdx === game.laiziTypeIdx) {
+        if (
+          game.laiziTypeIdx != null &&
+          pl.hand[i].typeIdx === game.laiziTypeIdx
+        ) {
           ctx.fillStyle = "#ff0000";
           ctx.beginPath();
           ctx.arc(x + tw - 3, y + 3, 2.5, 0, Math.PI * 2);
@@ -2280,7 +2428,10 @@ function drawDebugOpponentHands() {
         const x = baseX + col * (tw + gap);
         const y = baseY + row * (th + gap);
         drawTileFace(x, y, tw, th, pl.hand[i].typeIdx);
-        if (game.laiziTypeIdx != null && pl.hand[i].typeIdx === game.laiziTypeIdx) {
+        if (
+          game.laiziTypeIdx != null &&
+          pl.hand[i].typeIdx === game.laiziTypeIdx
+        ) {
           ctx.fillStyle = "#ff0000";
           ctx.beginPath();
           ctx.arc(x + tw - 3, y + 3, 2.5, 0, Math.PI * 2);
@@ -2502,22 +2653,25 @@ function computeNorthPlayerCardHorizontalBounds() {
   const room = mp.roomState;
   const players = Array.isArray(room?.players) ? room.players : [];
   const posX = SCREEN_W / 2;
-  const seat = 2;
-  const p = players.find((x) => x.seat === seat);
+  const localSeat = 2;
+  const realSeat = Array.isArray(localSeatToRealSeat)
+    ? localSeatToRealSeat[localSeat]
+    : localSeat;
+  const p = players.find((x) => x.seat === realSeat);
   const meTag = p && p.uid === mp.uid ? "我" : "";
   const nick = p ? p.nickname || "匿名" : "等待加入";
   const botTag = p && p.isBot ? " [电脑]" : "";
   const ownerTag = room && p && p.uid === room.ownerUid ? " [房主]" : "";
   const localIdx =
-    realSeatToLocalSeat && Number.isInteger(realSeatToLocalSeat[seat])
-      ? realSeatToLocalSeat[seat]
-      : seat;
+    realSeatToLocalSeat && Number.isInteger(realSeatToLocalSeat[realSeat])
+      ? realSeatToLocalSeat[realSeat]
+      : localSeat;
   const scoreAmt = Number(playerScoreByLocal[localIdx] || 0);
   const readyLobbyText = p ? (p.ready ? "已准备" : "未准备") : "等待";
   const secondSeg = inGame ? `${scoreAmt}元` : readyLobbyText;
   const onlineText = p ? (p.online ? "在线" : "离线") : "-";
   const titleMain = `${nick}${meTag ? `(${meTag})` : ""}${ownerTag}${botTag}`;
-  const chengTimes = Number(chengCountByRealSeat[seat] || 0);
+  const chengTimes = Number(chengCountByRealSeat[realSeat] || 0);
   const chengTag = chengTimes > 0 ? ` [逞x${chengTimes}]` : "";
   const status = `${onlineText} | ${secondSeg}`;
   const avatarReserve = p && !p.isBot ? 28 : 0;
@@ -2550,7 +2704,8 @@ function drawMeldGroupHorizontalAt(meld, startX, startY, meldW, meldH) {
  */
 function drawMeldsNorth(playerIdx, startY) {
   const player = game.players[playerIdx];
-  if (!player || !Array.isArray(player.melds) || player.melds.length === 0) return;
+  if (!player || !Array.isArray(player.melds) || player.melds.length === 0)
+    return;
 
   const tileW = 45;
   const tileH = 60;
@@ -2560,7 +2715,8 @@ function drawMeldsNorth(playerIdx, startY) {
   /** 与北家信息卡之间的水平留白，略大可减少第 2 组碰杠与卡片重叠 */
   const padCard = 14;
 
-  const { left: cardLeft, right: cardRight } = computeNorthPlayerCardHorizontalBounds();
+  const { left: cardLeft, right: cardRight } =
+    computeNorthPlayerCardHorizontalBounds();
 
   const melds = player.melds;
   const leftGroups = melds.slice(0, 2);
@@ -2584,7 +2740,13 @@ function drawMeldsNorth(playerIdx, startY) {
 
   let xRight = cardRight + padCard;
   for (let i = 0; i < rightGroups.length; i += 1) {
-    xRight = drawMeldGroupHorizontalAt(rightGroups[i], xRight, startY, meldW, meldH);
+    xRight = drawMeldGroupHorizontalAt(
+      rightGroups[i],
+      xRight,
+      startY,
+      meldW,
+      meldH,
+    );
     if (i < rightGroups.length - 1) xRight += groupGap;
   }
 }
@@ -2602,7 +2764,8 @@ function drawMelds(playerIdx, startX, startY) {
   const meldW = tileW * 0.6;
   const meldH = tileH * 0.6;
   const player = game.players[playerIdx];
-  if (!player || !Array.isArray(player.melds) || player.melds.length === 0) return;
+  if (!player || !Array.isArray(player.melds) || player.melds.length === 0)
+    return;
 
   // 东(3)/西(1)：一行两组；西在屏左左对齐，东在屏右右对齐（与 drawRoomPlayersPanel 座位一致）
   if (playerIdx === 1 || playerIdx === 3) {
@@ -2667,7 +2830,7 @@ function drawMeldsForPlayer() {
   // 绘制己方玩家的碰/杠牌（显示在手牌右边）
   drawMelds(bottomIdx, startX, SCREEN_H - 80);
   // 西(本地 1)：屏左，与 seatPos 一致（勿与「右家」命名混淆）
-  drawMelds(rightIdx, 50, SCREEN_H / 2 - 90);
+  drawMelds(rightIdx, 20, SCREEN_H / 2 - 90);
   // 绘制顶部（北）玩家碰/杠：牌桌左对齐，卡片左/右分区
   drawMeldsNorth(topIdx, 60);
   // 东(本地 3)：屏右，startX 为碰杠区右缘
@@ -2703,7 +2866,10 @@ function addRoundRectPath(ctx, x, y, w, h, r) {
 function drawTileFace(x, y, w, h, typeIdx) {
   const img = getTileImage(typeIdx);
   if (img && img.width > 0 && img.height > 0) {
-    const cornerR = Math.min(12, Math.max(4, Math.floor(Math.min(w, h) * 0.14)));
+    const cornerR = Math.min(
+      12,
+      Math.max(4, Math.floor(Math.min(w, h) * 0.14)),
+    );
     ctx.save();
     ctx.beginPath();
     addRoundRectPath(ctx, x, y, w, h, cornerR);
@@ -2771,6 +2937,41 @@ function drawDiscards(startX, startY, areaWHint) {
     const y = startY + row * (discardH + gap);
     drawTileFace(x, y, discardW, discardH, tile.typeIdx);
   }
+}
+
+/**
+ * 自己回合时，在手牌上方给出醒目的出牌提示。
+ */
+function drawSelfTurnPrompt() {
+  if (!multiplayer.state.gameStarted) return;
+  if (game.phase !== "discard" || game.current !== 0) return;
+
+  const label = "轮到你出牌";
+  const w = 126;
+  const h = 30;
+  const x = SCREEN_W / 2 - w / 2;
+  const y = SCREEN_H - 108;
+  const pulse = (Math.sin(Date.now() / 260) + 1) / 2;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(255, 228, 94, 0.7)";
+  ctx.shadowBlur = 8 + pulse * 6;
+  ctx.fillStyle = "rgba(255, 228, 94, 0.92)";
+  ctx.beginPath();
+  addRoundRectPath(ctx, x, y, w, h, 15);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.70)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  addRoundRectPath(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 14);
+  ctx.stroke();
+  ctx.fillStyle = "#4a2b00";
+  ctx.font = "bold 15px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, SCREEN_W / 2, y + h / 2);
+  ctx.restore();
 }
 
 /**
@@ -2983,7 +3184,9 @@ function drawOnlineButtons() {
     const room = multiplayer.state.roomState;
     const waiting = room?.status === "waiting";
     const bsFromRoom = Number(room?.baseStake);
-    const roomStake = BASE_STAKE_CHOICES.includes(bsFromRoom) ? bsFromRoom : null;
+    const roomStake = BASE_STAKE_CHOICES.includes(bsFromRoom)
+      ? bsFromRoom
+      : null;
     const effectiveStake =
       inRoom && roomStake != null ? roomStake : lobbyPreferredBaseStake;
     const ownerHere = room && room.ownerUid === multiplayer.state.uid;
@@ -3079,7 +3282,8 @@ function drawAuthGateScreen() {
 /** 侧家（东/西）碰杠区底部 Y（与 drawMelds 一行两组一致） */
 function estimateSideMeldsBottomY(playerIdx, startY) {
   const player = game.players[playerIdx];
-  if (!player || !Array.isArray(player.melds) || player.melds.length === 0) return startY;
+  if (!player || !Array.isArray(player.melds) || player.melds.length === 0)
+    return startY;
   const tileH = 60;
   const meldH = tileH * 0.6;
   const rowGap = 6;
@@ -3090,7 +3294,8 @@ function estimateSideMeldsBottomY(playerIdx, startY) {
 /** 北家碰杠区下缘（与 drawMeldsNorth 单行高度一致，略留边） */
 function estimateNorthMeldsBottomY(playerIdx) {
   const player = game.players[playerIdx];
-  if (!player || !Array.isArray(player.melds) || player.melds.length === 0) return 60;
+  if (!player || !Array.isArray(player.melds) || player.melds.length === 0)
+    return 60;
   const meldH = 60 * 0.6;
   return 60 + meldH + 12;
 }
@@ -3099,7 +3304,11 @@ function estimateNorthMeldsBottomY(playerIdx) {
  * 胡牌结算时展示胡家手牌（仅本地座位非己方的胡家），排在碰杠区下方避免遮挡
  */
 function drawWinnerRevealHands() {
-  if (game.phase !== "gameover" || !Array.isArray(game.winnerExposeHand) || !game.winnerExposeHand.length) {
+  if (
+    game.phase !== "gameover" ||
+    !Array.isArray(game.winnerExposeHand) ||
+    !game.winnerExposeHand.length
+  ) {
     return;
   }
   const wl = game.winner;
@@ -3161,10 +3370,18 @@ function drawGameOver() {
     ctx.shadowColor = "rgba(0,0,0,0.75)";
     ctx.shadowBlur = 6;
     ctx.fillStyle = "#fff8e1";
-    ctx.fillText(huLbl ? `${name} 胡牌（${huLbl}）` : `${name} 胡牌`, SCREEN_W / 2, SCREEN_H / 2 - 40);
+    ctx.fillText(
+      huLbl ? `${name} 胡牌（${huLbl}）` : `${name} 胡牌`,
+      SCREEN_W / 2,
+      SCREEN_H / 2 - 40,
+    );
     const sign = game.score >= 0 ? "+" : "";
     ctx.font = "22px sans-serif";
-    ctx.fillText(`你的本局收支：${sign}${game.score} 元`, SCREEN_W / 2, SCREEN_H / 2 + 6);
+    ctx.fillText(
+      `你的本局收支：${sign}${game.score} 元`,
+      SCREEN_W / 2,
+      SCREEN_H / 2 + 6,
+    );
     ctx.shadowBlur = 0;
     ctx.restore();
   }
@@ -3197,6 +3414,7 @@ function loop() {
   drawRoomPlayersPanel(); // 绘制房间玩家面板
   if (multiplayer.state.gameStarted) {
     drawHandsAndDiscards();
+    drawSelfTurnPrompt();
     drawReactionButtons(); //  绘制反应按钮（碰/杠/过）
     drawChengButton(); //  绘制逞按钮
     //   drawHuButton(); //  绘制胡按钮
@@ -3228,7 +3446,9 @@ function handleTouchStart(event) {
   // 获取触摸点坐标
   const touchList =
     (event.touches && event.touches.length > 0 && event.touches) ||
-    (event.changedTouches && event.changedTouches.length > 0 && event.changedTouches) ||
+    (event.changedTouches &&
+      event.changedTouches.length > 0 &&
+      event.changedTouches) ||
     [];
   if (!touchList.length) return;
   const touch = touchList[0];

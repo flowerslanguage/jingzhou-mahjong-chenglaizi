@@ -1,5 +1,7 @@
 const cloud = require("wx-server-sdk");
-const { chooseBotDiscardTileId: chooseBotDiscardTileIdAi } = require("./botDiscardAi");
+const {
+  chooseBotDiscardTileId: chooseBotDiscardTileIdAi,
+} = require("./botDiscardAi");
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -92,7 +94,9 @@ function displayNameBySeat(room, seat, ss) {
       return displayNameFromPlayer(p);
     }
   }
-  return displayNameFromPlayer(sameSeat[0] || norm.find((x) => Number(x.seat) === s));
+  return displayNameFromPlayer(
+    sameSeat[0] || norm.find((x) => Number(x.seat) === s),
+  );
 }
 
 /** 生成唯一房号：若冲突则重试，最终兜底返回时间片段 */
@@ -100,7 +104,11 @@ async function uniqueRoomNo() {
   // 生成 6 位房号，最多重试 20 次，避免重复
   for (let i = 0; i < 20; i += 1) {
     const roomNo = makeRoomNo();
-    const found = await db.collection(ROOM_COLLECTION).where({ roomNo }).limit(1).get();
+    const found = await db
+      .collection(ROOM_COLLECTION)
+      .where({ roomNo })
+      .limit(1)
+      .get();
     if (!found.data || found.data.length === 0) return roomNo;
   }
   return `${Math.floor(now() / 1000)}`.slice(-6);
@@ -139,14 +147,22 @@ function safeRoomState(room) {
 
 /** 通过 roomId 查询房间文档 */
 async function getRoomById(roomId) {
-  const ret = await db.collection(ROOM_COLLECTION).where({ roomId }).limit(1).get();
+  const ret = await db
+    .collection(ROOM_COLLECTION)
+    .where({ roomId })
+    .limit(1)
+    .get();
   if (!ret.data || ret.data.length === 0) return null;
   return ret.data[0];
 }
 
 /** 通过 roomNo 查询房间文档 */
 async function getRoomByNo(roomNo) {
-  const ret = await db.collection(ROOM_COLLECTION).where({ roomNo }).limit(1).get();
+  const ret = await db
+    .collection(ROOM_COLLECTION)
+    .where({ roomNo })
+    .limit(1)
+    .get();
   if (!ret.data || ret.data.length === 0) return null;
   return ret.data[0];
 }
@@ -219,7 +235,8 @@ async function actionJoinRoom(event, wxContext) {
   const avatarUrl = String(event?.payload?.avatarUrl || "").trim();
   const room = await getRoomByNo(roomNo);
   if (!room) return { ok: false, code: "E_ROOM_NOT_FOUND" };
-  if (room.status !== "waiting") return { ok: false, code: "E_ROOM_ALREADY_STARTED" };
+  if (room.status !== "waiting")
+    return { ok: false, code: "E_ROOM_ALREADY_STARTED" };
   const players = normalizePlayers(room.players || []);
   const hasMe = players.find((p) => p.uid === uid);
   if (hasMe) {
@@ -250,13 +267,16 @@ async function actionJoinRoom(event, wxContext) {
     botCount: normalizePlayers(players).filter((p) => p.isBot).length,
     updatedAt: now(),
   };
-  await db.collection(ROOM_COLLECTION).doc(room._id).update({
-    data: {
-      players: nextRoom.players,
-      botCount: nextRoom.botCount,
-      updatedAt: nextRoom.updatedAt,
-    },
-  });
+  await db
+    .collection(ROOM_COLLECTION)
+    .doc(room._id)
+    .update({
+      data: {
+        players: nextRoom.players,
+        botCount: nextRoom.botCount,
+        updatedAt: nextRoom.updatedAt,
+      },
+    });
   return {
     ok: true,
     roomId: nextRoom.roomId,
@@ -287,7 +307,8 @@ async function actionSetReady(event, wxContext) {
   const me = players.find((p) => p.uid === uid);
   if (!me) return { ok: false, code: "E_ROOM_NOT_IN" };
   me.ready = wantReady;
-  const canStart = players.length === TABLE_SIZE && players.every((p) => p.ready);
+  const canStart =
+    players.length === TABLE_SIZE && players.every((p) => p.ready);
   const nextStatus = canStart ? "gaming" : "waiting";
   let nextSnapshot = room.gameSnapshot || null;
   if (canStart) {
@@ -297,15 +318,18 @@ async function actionSetReady(event, wxContext) {
       players,
     });
   }
-  await db.collection(ROOM_COLLECTION).doc(room._id).update({
-    data: {
-      players,
-      status: nextStatus,
-      gameSnapshot: gameSnapshotWrite(nextSnapshot),
-      updatedAt: now(),
-      gameUpdatedAt: canStart ? now() : room.gameUpdatedAt || null,
-    },
-  });
+  await db
+    .collection(ROOM_COLLECTION)
+    .doc(room._id)
+    .update({
+      data: {
+        players,
+        status: nextStatus,
+        gameSnapshot: gameSnapshotWrite(nextSnapshot),
+        updatedAt: now(),
+        gameUpdatedAt: canStart ? now() : room.gameUpdatedAt || null,
+      },
+    });
   return {
     ok: true,
     ready: wantReady,
@@ -317,7 +341,9 @@ async function actionSetReady(event, wxContext) {
     }),
     started: canStart,
     // 仅返回给当前调用者的开局载荷（其他玩家通过 watch + snapshot 拉取）
-    startPayload: canStart ? buildSnapshotForUid({ ...room, players }, uid, nextSnapshot) : null,
+    startPayload: canStart
+      ? buildSnapshotForUid({ ...room, players }, uid, nextSnapshot)
+      : null,
   };
 }
 
@@ -329,11 +355,15 @@ async function actionSetBots(event, wxContext) {
   const room = await getRoomById(roomId);
   if (!room) return { ok: false, code: "E_ROOM_NOT_FOUND" };
   if (room.ownerUid !== uid) return { ok: false, code: "E_ROOM_NOT_OWNER" };
-  if (room.status !== "waiting") return { ok: false, code: "E_ROOM_INVALID_STATE" };
+  if (room.status !== "waiting")
+    return { ok: false, code: "E_ROOM_INVALID_STATE" };
   const players = normalizePlayers(room.players || []);
   const humans = players.filter((p) => !p.isBot);
   const maxBots = Math.max(0, TABLE_SIZE - humans.length);
-  const target = Math.max(0, Math.min(Number(event?.payload?.botCount || 0), maxBots));
+  const target = Math.max(
+    0,
+    Math.min(Number(event?.payload?.botCount || 0), maxBots),
+  );
   const usedSeats = new Set(humans.map((p) => p.seat));
   let botIndex = 1;
   while (botIndex <= target) {
@@ -351,13 +381,16 @@ async function actionSetBots(event, wxContext) {
     botIndex += 1;
   }
   const merged = normalizePlayers(humans);
-  await db.collection(ROOM_COLLECTION).doc(room._id).update({
-    data: {
-      players: merged,
-      botCount: target,
-      updatedAt: now(),
-    },
-  });
+  await db
+    .collection(ROOM_COLLECTION)
+    .doc(room._id)
+    .update({
+      data: {
+        players: merged,
+        botCount: target,
+        updatedAt: now(),
+      },
+    });
   return {
     ok: true,
     botCount: target,
@@ -379,11 +412,15 @@ async function actionSetBaseStake(event, wxContext) {
   const room = await getRoomById(roomId);
   if (!room) return { ok: false, code: "E_ROOM_NOT_FOUND" };
   if (room.ownerUid !== uid) return { ok: false, code: "E_ROOM_NOT_OWNER" };
-  if (room.status !== "waiting") return { ok: false, code: "E_ROOM_INVALID_STATE" };
+  if (room.status !== "waiting")
+    return { ok: false, code: "E_ROOM_INVALID_STATE" };
   const baseStake = normalizeBaseStake(event?.payload?.baseStake);
-  await db.collection(ROOM_COLLECTION).doc(room._id).update({
-    data: { baseStake, updatedAt: now() },
-  });
+  await db
+    .collection(ROOM_COLLECTION)
+    .doc(room._id)
+    .update({
+      data: { baseStake, updatedAt: now() },
+    });
   const nextRoom = { ...room, baseStake, updatedAt: now() };
   return { ok: true, baseStake, roomState: safeRoomState(nextRoom) };
 }
@@ -396,7 +433,10 @@ async function actionNextRound(event, wxContext) {
   const room = await getRoomById(roomId);
   if (!room) return { ok: false, code: "E_ROOM_NOT_FOUND" };
   if (room.ownerUid !== uid) return { ok: false, code: "E_ROOM_NOT_OWNER" };
-  const players = normalizePlayers(room.players || []).map((p) => ({ ...p, ready: true }));
+  const players = normalizePlayers(room.players || []).map((p) => ({
+    ...p,
+    ready: true,
+  }));
   const canStart = players.length === TABLE_SIZE;
   const nextSnapshot = canStart
     ? createGameSnapshot({
@@ -404,15 +444,18 @@ async function actionNextRound(event, wxContext) {
         players,
       })
     : room.gameSnapshot || null;
-  await db.collection(ROOM_COLLECTION).doc(room._id).update({
-    data: {
-      players,
-      status: canStart ? "gaming" : "waiting",
-      gameSnapshot: gameSnapshotWrite(nextSnapshot),
-      updatedAt: now(),
-      gameUpdatedAt: canStart ? now() : room.gameUpdatedAt || null,
-    },
-  });
+  await db
+    .collection(ROOM_COLLECTION)
+    .doc(room._id)
+    .update({
+      data: {
+        players,
+        status: canStart ? "gaming" : "waiting",
+        gameSnapshot: gameSnapshotWrite(nextSnapshot),
+        updatedAt: now(),
+        gameUpdatedAt: canStart ? now() : room.gameUpdatedAt || null,
+      },
+    });
   return {
     ok: true,
     roomState: safeRoomState({
@@ -421,7 +464,9 @@ async function actionNextRound(event, wxContext) {
       status: canStart ? "gaming" : "waiting",
       updatedAt: now(),
     }),
-    startPayload: canStart ? buildSnapshotForUid({ ...room, players }, uid, nextSnapshot) : null,
+    startPayload: canStart
+      ? buildSnapshotForUid({ ...room, players }, uid, nextSnapshot)
+      : null,
   };
 }
 
@@ -433,7 +478,9 @@ async function actionLeaveRoom(event, wxContext) {
   if (!roomId) return { ok: false, code: "E_ROOM_NOT_FOUND" };
   const room = await getRoomById(roomId);
   if (!room) return { ok: true, closed: true };
-  const inRoom = normalizePlayers(room.players || []).some((p) => p.uid === uid);
+  const inRoom = normalizePlayers(room.players || []).some(
+    (p) => p.uid === uid,
+  );
   if (!inRoom) return { ok: false, code: "E_ROOM_NOT_IN" };
   await db.collection(ROOM_COLLECTION).doc(room._id).remove();
   return { ok: true, closed: true };
@@ -477,16 +524,27 @@ exports.main = async (event = {}) => {
     if (action === "room.state") return actionGetRoomState(event, wxContext);
     if (action === "room.ready") return actionSetReady(event, wxContext);
     if (action === "room.setBots") return actionSetBots(event, wxContext);
-    if (action === "room.setBaseStake") return actionSetBaseStake(event, wxContext);
+    if (action === "room.setBaseStake")
+      return actionSetBaseStake(event, wxContext);
     if (action === "room.leave") return actionLeaveRoom(event, wxContext);
     if (action === "room.nextRound") return actionNextRound(event, wxContext);
     if (action === "room.recreate") return actionRecreateRoom(event, wxContext);
     if (action === "game.snapshot") return actionGameSnapshot(roomId, uid);
-    if (action === "game.discard") return actionGameDiscard(roomId, uid, event?.payload || {});
-    if (action === "game.reaction") return actionGameReaction(roomId, uid, event?.payload || {});
-    return { ok: false, code: "E_NOT_IMPLEMENTED", message: action || "unknown action" };
+    if (action === "game.discard")
+      return actionGameDiscard(roomId, uid, event?.payload || {});
+    if (action === "game.reaction")
+      return actionGameReaction(roomId, uid, event?.payload || {});
+    return {
+      ok: false,
+      code: "E_NOT_IMPLEMENTED",
+      message: action || "unknown action",
+    };
   } catch (err) {
-    return { ok: false, code: "E_INTERNAL", message: err?.message || "internal error" };
+    return {
+      ok: false,
+      code: "E_INTERNAL",
+      message: err?.message || "internal error",
+    };
   }
 };
 
@@ -555,7 +613,12 @@ function canFormMelds(counts, memo) {
   // 顺子（同花色且 i,i+1,i+2 都有）
   const suit = Math.floor(i / 9);
   const pos = i % 9;
-  if (pos <= 6 && Math.floor((i + 2) / 9) === suit && counts[i + 1] > 0 && counts[i + 2] > 0) {
+  if (
+    pos <= 6 &&
+    Math.floor((i + 2) / 9) === suit &&
+    counts[i + 1] > 0 &&
+    counts[i + 2] > 0
+  ) {
     counts[i] -= 1;
     counts[i + 1] -= 1;
     counts[i + 2] -= 1;
@@ -699,7 +762,9 @@ function canHuByTypes(typeIdxs, laiziTypeIdx) {
 
 /** 判断指定座位当前手牌是否可胡（仅自摸） */
 function canSeatHu(room, ss, seat) {
-  const player = normalizePlayers(room.players || []).find((p) => p.seat === seat);
+  const player = normalizePlayers(room.players || []).find(
+    (p) => p.seat === seat,
+  );
   if (!player) return false;
   const hand = (ss.handsByUid[player.uid] || []).map((t) => t.typeIdx);
   const melds = ss.meldsBySeat?.[seat] || [];
@@ -753,7 +818,8 @@ function buildDiscardTypeCounts(ss) {
     const arr = Array.isArray(bySeat[seatKey]) ? bySeat[seatKey] : [];
     for (const t of arr) {
       const idx = Number(t?.typeIdx);
-      if (Number.isInteger(idx) && idx >= 0 && idx < TILE_KIND_COUNT) counts[idx] += 1;
+      if (Number.isInteger(idx) && idx >= 0 && idx < TILE_KIND_COUNT)
+        counts[idx] += 1;
     }
   }
   return counts;
@@ -762,7 +828,9 @@ function buildDiscardTypeCounts(ss) {
 /** 基于“逞后手牌”计算所有可胡进张牌型（听牌列表） */
 function getWinningTypesAfterCheng(room, ss, seat) {
   if (ss.laiziTypeIdx == null || ss.laiziTypeIdx < 0) return [];
-  const player = normalizePlayers(room.players || []).find((p) => p.seat === seat);
+  const player = normalizePlayers(room.players || []).find(
+    (p) => p.seat === seat,
+  );
   if (!player) return [];
   const types = (ss.handsByUid[player.uid] || []).map((t) => t.typeIdx);
   const melds = ss.meldsBySeat?.[seat] || [];
@@ -833,8 +901,12 @@ function handHasLaiziInWinningHand(ss, room, seat) {
 /** 直杠结算：点杠者付 15，杠牌者收 15 */
 function settleZhigang(room, ss, gangSeat, fromSeat) {
   initRoundMoney(ss, room);
-  const gangP = normalizePlayers(room.players || []).find((p) => p.seat === gangSeat);
-  const fromP = normalizePlayers(room.players || []).find((p) => p.seat === fromSeat);
+  const gangP = normalizePlayers(room.players || []).find(
+    (p) => p.seat === gangSeat,
+  );
+  const fromP = normalizePlayers(room.players || []).find(
+    (p) => p.seat === fromSeat,
+  );
   if (!gangP || !fromP) return;
   const m = stakeMoney(room, 15);
   addScoreDelta(ss, fromP.uid, -m);
@@ -845,8 +917,12 @@ function settleZhigang(room, ss, gangSeat, fromSeat) {
 function settleDingguoPeng(room, ss, pengSeat, fromSeat, hadPairInHand) {
   if (!hadPairInHand) return;
   initRoundMoney(ss, room);
-  const pengP = normalizePlayers(room.players || []).find((p) => p.seat === pengSeat);
-  const fromP = normalizePlayers(room.players || []).find((p) => p.seat === fromSeat);
+  const pengP = normalizePlayers(room.players || []).find(
+    (p) => p.seat === pengSeat,
+  );
+  const fromP = normalizePlayers(room.players || []).find(
+    (p) => p.seat === fromSeat,
+  );
   if (!pengP || !fromP) return;
   const m = stakeMoney(room, 15);
   addScoreDelta(ss, fromP.uid, -m);
@@ -856,7 +932,9 @@ function settleDingguoPeng(room, ss, pengSeat, fromSeat, hadPairInHand) {
 /** 暗杠结算：其余三家各付 10，杠牌者共收 30 */
 function settleAnGang(room, ss, gangSeat) {
   initRoundMoney(ss, room);
-  const gangP = normalizePlayers(room.players || []).find((p) => p.seat === gangSeat);
+  const gangP = normalizePlayers(room.players || []).find(
+    (p) => p.seat === gangSeat,
+  );
   if (!gangP) return;
   const pay = stakeMoney(room, 10);
   let gain = 0;
@@ -871,7 +949,9 @@ function settleAnGang(room, ss, gangSeat) {
 /** 自摸胡结算：油/软硬胡 + 逞倍数，返回胡牌标签 */
 function settleSelfHu(room, ss, winnerSeat, isOil) {
   initRoundMoney(ss, room);
-  const winP = normalizePlayers(room.players || []).find((p) => p.seat === winnerSeat);
+  const winP = normalizePlayers(room.players || []).find(
+    (p) => p.seat === winnerSeat,
+  );
   if (!winP) return { kind: "hu", label: "", isOil: false };
   const soft = handHasLaiziInWinningHand(ss, room, winnerSeat);
   let totalGain = 0;
@@ -883,7 +963,12 @@ function settleSelfHu(room, ss, winnerSeat, isOil) {
       totalGain += per;
     }
     addScoreDelta(ss, winP.uid, totalGain);
-    return { kind: "oil", label: soft ? "软油" : "黑油", isOil: true, perPerson: per };
+    return {
+      kind: "oil",
+      label: soft ? "软油" : "黑油",
+      isOil: true,
+      perPerson: per,
+    };
   }
   const base = stakeMoney(room, soft ? 5 : 10);
   const chengMult = (count) => {
@@ -926,7 +1011,9 @@ function getAnGangCandidates(hand) {
 
 /** 摸牌后的阶段流转：暗杠自反应 / 出牌 / 最后一张后流局 */
 function enterAfterDraw(room, ss, seat) {
-  const player = normalizePlayers(room.players || []).find((p) => p.seat === seat);
+  const player = normalizePlayers(room.players || []).find(
+    (p) => p.seat === seat,
+  );
   if (!player) return;
   const hand = ss.handsByUid[player.uid] || [];
   const cands = getAnGangCandidates(hand);
@@ -1010,7 +1097,9 @@ function createGameSnapshot(room) {
   const indicator = wall.pop() || null;
   const dingGuoTypeIdx = indicator ? indicator.typeIdx : null;
   const laiziTypeIdx =
-    indicator && typeof indicator.typeIdx === "number" ? nextInSuit(indicator.typeIdx) : null;
+    indicator && typeof indicator.typeIdx === "number"
+      ? nextInSuit(indicator.typeIdx)
+      : null;
   // 庄家（座位 0）摸 14 张先出牌
   const dealer = bySeat.find((p) => p.seat === 0);
   let dealerDrawTileId = null;
@@ -1055,7 +1144,10 @@ function createGameSnapshot(room) {
     chengCountBySeat: { 0: 0, 1: 0, 2: 0, 3: 0 },
     oilEligibleSeat: null,
     scoreDeltaByUid: {},
-    selfLastDrawTileIdByUid: dealer && dealerDrawTileId != null ? { [dealer.uid]: dealerDrawTileId } : {},
+    selfLastDrawTileIdByUid:
+      dealer && dealerDrawTileId != null
+        ? { [dealer.uid]: dealerDrawTileId }
+        : {},
     // 机器人下一次允许行动时间（毫秒时间戳），用于控制动作间隔
     botNextActAt: now() + 1500,
     lastActionAt: now(),
@@ -1097,7 +1189,9 @@ function syncBotGate(room, ss) {
 
 /** 根据房间与 uid 计算当前可执行操作 */
 function getSelfOps(room, uid, ss) {
-  const player = normalizePlayers(room.players || []).find((p) => p.uid === uid);
+  const player = normalizePlayers(room.players || []).find(
+    (p) => p.uid === uid,
+  );
   if (!player || !ss) return null;
   if (ss.phase === "gameover") return null;
   if (ss.phase === "self_react" && ss.selfReaction) {
@@ -1151,10 +1245,10 @@ function getSelfOps(room, uid, ss) {
   if (ss.phase === "discard" && ss.currentSeat === player.seat) {
     const hand = ss.handsByUid[player.uid] || [];
     const canCheng =
-      ss.laiziTypeIdx != null && hand.some((t) => t.typeIdx === ss.laiziTypeIdx);
+      ss.laiziTypeIdx != null &&
+      hand.some((t) => t.typeIdx === ss.laiziTypeIdx);
     const blockedPengHu = ss.pengNoHuUntilDiscardSeat === player.seat;
-    const rawHu =
-      !blockedPengHu && canSeatHu(room, ss, player.seat);
+    const rawHu = !blockedPengHu && canSeatHu(room, ss, player.seat);
     const canHu = rawHu && ss.huPassSkipSeat !== player.seat;
     return {
       canPeng: false,
@@ -1193,7 +1287,9 @@ function buildBotHandsBySeat(room, ss) {
 /** 局末亮牌：胡牌者手牌（仅 gameover 且有胜者时下发） */
 function buildWinnerExposeHand(room, ss) {
   if (ss.phase !== "gameover" || ss.winnerSeat == null) return null;
-  const wp = normalizePlayers(room.players || []).find((p) => p.seat === ss.winnerSeat);
+  const wp = normalizePlayers(room.players || []).find(
+    (p) => p.seat === ss.winnerSeat,
+  );
   if (!wp) return null;
   const tiles = ss.handsByUid[wp.uid] || [];
   return tiles.map((t) => ({ id: t.id, typeIdx: t.typeIdx }));
@@ -1201,7 +1297,9 @@ function buildWinnerExposeHand(room, ss) {
 
 /** 构建可下发给当前玩家的游戏快照（仅包含本人手牌） */
 function buildSnapshotForUid(room, uid, ss) {
-  const seat = normalizePlayers(room.players || []).find((p) => p.uid === uid)?.seat;
+  const seat = normalizePlayers(room.players || []).find(
+    (p) => p.uid === uid,
+  )?.seat;
   return {
     roomId: room.roomId,
     roomNo: room.roomNo,
@@ -1226,7 +1324,9 @@ function buildSnapshotForUid(room, uid, ss) {
     scoreDeltaByUid: cloneScoreDelta(ss),
     chengCountBySeat: ss.chengCountBySeat || { 0: 0, 1: 0, 2: 0, 3: 0 },
     selfChengCount:
-      typeof ss.chengCountBySeat?.[seat] === "number" ? ss.chengCountBySeat[seat] : 0,
+      typeof ss.chengCountBySeat?.[seat] === "number"
+        ? ss.chengCountBySeat[seat]
+        : 0,
     botHandsBySeat: buildBotHandsBySeat(room, ss),
     winnerExposeHand: buildWinnerExposeHand(room, ss),
   };
@@ -1234,7 +1334,10 @@ function buildSnapshotForUid(room, uid, ss) {
 
 /** 同步 reaction 指针到当前等待响应的玩家 */
 function syncReactionPointer(ss) {
-  if (!ss.reactionQueue?.length || ss.reactionIndex >= ss.reactionQueue.length) {
+  if (
+    !ss.reactionQueue?.length ||
+    ss.reactionIndex >= ss.reactionQueue.length
+  ) {
     ss.reaction = null;
     return;
   }
@@ -1292,14 +1395,18 @@ function buildReactionQueue(room, fromSeat, discardTile, ss) {
 
 /** 给指定座位摸一张牌并切回 discard 阶段 */
 function drawOneToSeat(room, ss, seat) {
-  const player = normalizePlayers(room.players || []).find((p) => p.seat === seat);
+  const player = normalizePlayers(room.players || []).find(
+    (p) => p.seat === seat,
+  );
   if (!player) return null;
   const t = ss.wall.pop() || null;
   if (!t) return null;
   ss.handsByUid[player.uid].push(t);
   if (!ss.selfLastDrawTileIdByUid) ss.selfLastDrawTileIdByUid = {};
   ss.selfLastDrawTileIdByUid[player.uid] = t.id;
-  ss.handsByUid[player.uid].sort((a, b) => a.typeIdx - b.typeIdx || a.id - b.id);
+  ss.handsByUid[player.uid].sort(
+    (a, b) => a.typeIdx - b.typeIdx || a.id - b.id,
+  );
   ss.wallCount = ss.wall.length;
   enterAfterDraw(room, ss, seat);
   return t;
@@ -1330,6 +1437,11 @@ function applyDiscardCore(room, ss, uid, tileId) {
   const [discardTile] = hand.splice(idx, 1);
   if (!ss.discardsBySeat[actor.seat]) ss.discardsBySeat[actor.seat] = [];
   ss.discardsBySeat[actor.seat].push(discardTile);
+  if (ss.laiziTypeIdx != null && discardTile.typeIdx === ss.laiziTypeIdx) {
+    ss.chengCountBySeat[actor.seat] =
+      (ss.chengCountBySeat[actor.seat] || 0) + 1;
+    ss.oilEligibleSeat = actor.seat;
+  }
   if (!Array.isArray(ss.discardHistory)) ss.discardHistory = [];
   ss.discardHistory.push({ seat: actor.seat, tile: discardTile });
   const rq = buildReactionQueue(room, actor.seat, discardTile, ss);
@@ -1396,7 +1508,9 @@ function applyReactionCore(room, ss, uid, action, options = {}) {
   initRoundMoney(ss, room);
   // 自反应阶段：暗杠/过/可胡则胡
   if (ss.phase === "self_react" && ss.selfReaction?.uid === uid) {
-    const actor = normalizePlayers(room.players || []).find((p) => p.uid === uid);
+    const actor = normalizePlayers(room.players || []).find(
+      (p) => p.uid === uid,
+    );
     if (!actor) return { error: "E_ROOM_NOT_IN" };
     if (action === "pass") {
       ss.selfReaction = null;
@@ -1431,8 +1545,10 @@ function applyReactionCore(room, ss, uid, action, options = {}) {
       };
     }
     if (action === "hu") {
-      if (ss.pengNoHuUntilDiscardSeat === actor.seat) return { error: "E_INVALID_ACTION" };
-      if (!canSeatHu(room, ss, actor.seat)) return { error: "E_INVALID_ACTION" };
+      if (ss.pengNoHuUntilDiscardSeat === actor.seat)
+        return { error: "E_INVALID_ACTION" };
+      if (!canSeatHu(room, ss, actor.seat))
+        return { error: "E_INVALID_ACTION" };
       const isOil = ss.oilEligibleSeat === actor.seat;
       if (isOil) ss.oilEligibleSeat = null;
       const huSettlement = settleSelfHu(room, ss, actor.seat, isOil);
@@ -1464,7 +1580,8 @@ function applyReactionCore(room, ss, uid, action, options = {}) {
     }
     if (action === "an_gang") {
       const typeIdx = Number(options.typeIdx);
-      if (!Number.isInteger(typeIdx) || typeIdx < 0) return { error: "E_INVALID_ACTION" };
+      if (!Number.isInteger(typeIdx) || typeIdx < 0)
+        return { error: "E_INVALID_ACTION" };
       if (!ss.selfReaction.anGangCandidates.includes(typeIdx)) {
         return { error: "E_INVALID_ACTION" };
       }
@@ -1519,7 +1636,9 @@ function applyReactionCore(room, ss, uid, action, options = {}) {
 
   // 出牌阶段可胡时点「过」：本手不再提示胡，须再打出一张（与逞可同时存在，由客户端分支处理）
   if (action === "pass" && ss.phase === "discard") {
-    const actor = normalizePlayers(room.players || []).find((p) => p.uid === uid);
+    const actor = normalizePlayers(room.players || []).find(
+      (p) => p.uid === uid,
+    );
     if (!actor) return { error: "E_ROOM_NOT_IN" };
     if (actor.seat !== ss.currentSeat) return { error: "E_NOT_YOUR_TURN" };
     if (!canSeatHu(room, ss, actor.seat)) return { error: "E_INVALID_ACTION" };
@@ -1547,7 +1666,9 @@ function applyReactionCore(room, ss, uid, action, options = {}) {
 
   // 逞：只允许在自己的出牌阶段使用，打出癞子后立即补摸一张
   if (action === "cheng" && ss.phase === "discard") {
-    const actor = normalizePlayers(room.players || []).find((p) => p.uid === uid);
+    const actor = normalizePlayers(room.players || []).find(
+      (p) => p.uid === uid,
+    );
     if (!actor) return { error: "E_ROOM_NOT_IN" };
     if (actor.seat !== ss.currentSeat) return { error: "E_NOT_YOUR_TURN" };
     const hand = ss.handsByUid[uid] || [];
@@ -1561,7 +1682,8 @@ function applyReactionCore(room, ss, uid, action, options = {}) {
     if (!Array.isArray(ss.discardHistory)) ss.discardHistory = [];
     ss.discardHistory.push({ seat: actor.seat, tile: discardTile });
     const drawn = drawOneToSeat(room, ss, actor.seat);
-    ss.chengCountBySeat[actor.seat] = (ss.chengCountBySeat[actor.seat] || 0) + 1;
+    ss.chengCountBySeat[actor.seat] =
+      (ss.chengCountBySeat[actor.seat] || 0) + 1;
     ss.oilEligibleSeat = actor.seat;
     ss.seq += 1;
     ss.lastActionAt = now();
@@ -1595,10 +1717,13 @@ function applyReactionCore(room, ss, uid, action, options = {}) {
 
   // 胡：当前仅支持自摸胡（discard 阶段自己回合）；明碰/明杠后须出牌后才可胡（禁碰胡/杠胡）
   if (action === "hu" && ss.phase === "discard") {
-    const actor = normalizePlayers(room.players || []).find((p) => p.uid === uid);
+    const actor = normalizePlayers(room.players || []).find(
+      (p) => p.uid === uid,
+    );
     if (!actor) return { error: "E_ROOM_NOT_IN" };
     if (actor.seat !== ss.currentSeat) return { error: "E_NOT_YOUR_TURN" };
-    if (ss.pengNoHuUntilDiscardSeat === actor.seat) return { error: "E_INVALID_ACTION" };
+    if (ss.pengNoHuUntilDiscardSeat === actor.seat)
+      return { error: "E_INVALID_ACTION" };
     if (!canSeatHu(room, ss, actor.seat)) return { error: "E_INVALID_ACTION" };
     const isOil = ss.oilEligibleSeat === actor.seat;
     if (isOil) ss.oilEligibleSeat = null;
@@ -1629,7 +1754,8 @@ function applyReactionCore(room, ss, uid, action, options = {}) {
     };
   }
 
-  if (ss.phase !== "react" || !ss.reactionQueue?.length) return { error: "E_INVALID_PHASE" };
+  if (ss.phase !== "react" || !ss.reactionQueue?.length)
+    return { error: "E_INVALID_PHASE" };
   const actor = normalizePlayers(room.players || []).find((p) => p.uid === uid);
   if (!actor) return { error: "E_ROOM_NOT_IN" };
   const cur = ss.reactionQueue[ss.reactionIndex];
@@ -1716,7 +1842,11 @@ function applyReactionCore(room, ss, uid, action, options = {}) {
       } else {
         for (let i = ss.discardHistory.length - 1; i >= 0; i -= 1) {
           const it = ss.discardHistory[i];
-          if (it && it.seat === fromSeat && Number(it.tile?.id) === Number(tile?.id)) {
+          if (
+            it &&
+            it.seat === fromSeat &&
+            Number(it.tile?.id) === Number(tile?.id)
+          ) {
             ss.discardHistory.splice(i, 1);
             break;
           }
@@ -1784,7 +1914,9 @@ function runBots(room, ss, maxSteps = 24) {
   while (guard < maxSteps) {
     guard += 1;
     if (ss.phase === "gameover") break;
-    const current = normalizePlayers(room.players || []).find((p) => p.seat === ss.currentSeat);
+    const current = normalizePlayers(room.players || []).find(
+      (p) => p.seat === ss.currentSeat,
+    );
     if (!current || !current.isBot) break;
     if (ss.phase === "discard") {
       // 机器人策略：
@@ -1793,9 +1925,10 @@ function runBots(room, ss, maxSteps = 24) {
       // 3) 可胡时：有癞子则优先逞，无癞子则优先胡
       // 4) 其余按原逻辑出牌
       const hand = ss.handsByUid[current.uid] || [];
-      const laiziCount = ss.laiziTypeIdx == null
-        ? 0
-        : hand.filter((t) => t.typeIdx === ss.laiziTypeIdx).length;
+      const laiziCount =
+        ss.laiziTypeIdx == null
+          ? 0
+          : hand.filter((t) => t.typeIdx === ss.laiziTypeIdx).length;
       const canHuNow =
         ss.pengNoHuUntilDiscardSeat !== current.seat &&
         canSeatHu(room, ss, current.seat);
@@ -1813,10 +1946,13 @@ function runBots(room, ss, maxSteps = 24) {
       if (laiziCount > 1 && ss.laiziTypeIdx != null) {
         const laiziTile = hand.find((t) => t.typeIdx === ss.laiziTypeIdx);
         if (laiziTile) {
-          const discardRet = applyDiscardCore(room, ss, current.uid, laiziTile.id);
+          const discardRet = applyDiscardCore(
+            room,
+            ss,
+            current.uid,
+            laiziTile.id,
+          );
           if (!discardRet?.error) {
-            ss.chengCountBySeat[current.seat] = (ss.chengCountBySeat[current.seat] || 0) + 1;
-            ss.oilEligibleSeat = current.seat;
             continue;
           }
         }
@@ -1872,14 +2008,17 @@ function runBots(room, ss, maxSteps = 24) {
 
 /** 保存游戏快照到房间文档 */
 async function saveSnapshot(roomDoc, ss, statusOverride) {
-  await db.collection(ROOM_COLLECTION).doc(roomDoc._id).update({
-    data: {
-      gameSnapshot: gameSnapshotWrite(ss),
-      status: statusOverride || roomDoc.status,
-      updatedAt: now(),
-      gameUpdatedAt: now(),
-    },
-  });
+  await db
+    .collection(ROOM_COLLECTION)
+    .doc(roomDoc._id)
+    .update({
+      data: {
+        gameSnapshot: gameSnapshotWrite(ss),
+        status: statusOverride || roomDoc.status,
+        updatedAt: now(),
+        gameUpdatedAt: now(),
+      },
+    });
 }
 
 /** 处理 game.snapshot：返回当前 uid 可见的快照 */
@@ -1889,7 +2028,9 @@ async function actionGameSnapshot(roomId, uid) {
   if (!room) return { ok: false, code: "E_ROOM_NOT_FOUND" };
   const ss = room.gameSnapshot;
   if (!ss) return { ok: false, code: "E_GAME_NOT_FOUND" };
-  const inRoom = normalizePlayers(room.players || []).some((p) => p.uid === uid);
+  const inRoom = normalizePlayers(room.players || []).some(
+    (p) => p.uid === uid,
+  );
   if (!inRoom) return { ok: false, code: "E_ROOM_NOT_IN" };
   // 轮到真人时清掉机器人延时门，避免上一步遗留的 botNextActAt 挡住后续快照推进
   if (ss.phase !== "gameover" && !isBotPending(room, ss)) {
@@ -1903,7 +2044,11 @@ async function actionGameSnapshot(roomId, uid) {
   ) {
     runBots(room, ss, 1);
     syncBotGate(room, ss);
-    await saveSnapshot(room, ss, ss.phase === "gameover" ? "waiting" : room.status);
+    await saveSnapshot(
+      room,
+      ss,
+      ss.phase === "gameover" ? "waiting" : room.status,
+    );
   }
   return { ok: true, snapshot: buildSnapshotForUid(room, uid, ss) };
 }
@@ -1917,10 +2062,16 @@ async function actionGameDiscard(roomId, uid, payload) {
   if (!ss) return { ok: false, code: "E_GAME_NOT_FOUND" };
   const ret = applyDiscardCore(room, ss, uid, Number(payload?.tileId));
   if (ret?.error) return { ok: false, code: ret.error };
-  const selfSeat = normalizePlayers(room.players || []).find((p) => p.uid === uid)?.seat;
+  const selfSeat = normalizePlayers(room.players || []).find(
+    (p) => p.uid === uid,
+  )?.seat;
   // 玩家动作后不立即推进机器人，保留可感知间隔
   syncBotGate(room, ss);
-  await saveSnapshot(room, ss, ss.phase === "gameover" ? "waiting" : room.status);
+  await saveSnapshot(
+    room,
+    ss,
+    ss.phase === "gameover" ? "waiting" : room.status,
+  );
   const expose = buildWinnerExposeHand(room, ss);
   return {
     ok: true,
@@ -1938,7 +2089,10 @@ async function actionGameDiscard(roomId, uid, payload) {
       nextSeat: ss.currentSeat,
       status: ss.status,
       selfLastDrawTileId: ss.selfLastDrawTileIdByUid?.[uid] ?? null,
-      selfChengCount: typeof ss.chengCountBySeat?.[selfSeat] === "number" ? ss.chengCountBySeat[selfSeat] : 0,
+      selfChengCount:
+        typeof ss.chengCountBySeat?.[selfSeat] === "number"
+          ? ss.chengCountBySeat[selfSeat]
+          : 0,
       botHandsBySeat: buildBotHandsBySeat(room, ss),
     },
   };
@@ -1954,10 +2108,16 @@ async function actionGameReaction(roomId, uid, payload) {
   const act = String(payload?.action || "").trim();
   const ret = applyReactionCore(room, ss, uid, act, payload || {});
   if (ret?.error) return { ok: false, code: ret.error };
-  const selfSeat = normalizePlayers(room.players || []).find((p) => p.uid === uid)?.seat;
+  const selfSeat = normalizePlayers(room.players || []).find(
+    (p) => p.uid === uid,
+  )?.seat;
   // 玩家动作后不立即推进机器人，保留可感知间隔
   syncBotGate(room, ss);
-  await saveSnapshot(room, ss, ss.phase === "gameover" ? "waiting" : room.status);
+  await saveSnapshot(
+    room,
+    ss,
+    ss.phase === "gameover" ? "waiting" : room.status,
+  );
   const expose = buildWinnerExposeHand(room, ss);
   return {
     ok: true,
@@ -1975,9 +2135,11 @@ async function actionGameReaction(roomId, uid, payload) {
       nextSeat: ss.currentSeat,
       status: ss.status,
       selfLastDrawTileId: ss.selfLastDrawTileIdByUid?.[uid] ?? null,
-      selfChengCount: typeof ss.chengCountBySeat?.[selfSeat] === "number" ? ss.chengCountBySeat[selfSeat] : 0,
+      selfChengCount:
+        typeof ss.chengCountBySeat?.[selfSeat] === "number"
+          ? ss.chengCountBySeat[selfSeat]
+          : 0,
       botHandsBySeat: buildBotHandsBySeat(room, ss),
     },
   };
 }
-

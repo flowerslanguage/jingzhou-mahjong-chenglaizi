@@ -7,7 +7,9 @@
 const roomsById = new Map();
 const roomIdByNo = new Map();
 const { canHuByTypes } = require("../../logic");
-const { chooseBotDiscardTileId: chooseBotDiscardTileIdAi } = require("../../shared/botDiscardAi");
+const {
+  chooseBotDiscardTileId: chooseBotDiscardTileIdAi,
+} = require("../../shared/botDiscardAi");
 const settlement = require("./settlement");
 const { normalizeBaseStake } = settlement;
 
@@ -368,7 +370,9 @@ function drawOneToSeat(room, seat) {
   const t = wall.pop() || null;
   if (!t) return null;
   ss.handsByUid[player.uid].push(t);
-  ss.handsByUid[player.uid].sort((a, b) => a.typeIdx - b.typeIdx || a.id - b.id);
+  ss.handsByUid[player.uid].sort(
+    (a, b) => a.typeIdx - b.typeIdx || a.id - b.id,
+  );
   ss.wallCount = wall.length;
   afterPlayerDraw(room, seat);
   return t;
@@ -387,7 +391,10 @@ function canSeatHu(ss, room, seat) {
 }
 
 function syncReactionPointer(ss) {
-  if (!ss.reactionQueue?.length || ss.reactionIndex >= ss.reactionQueue.length) {
+  if (
+    !ss.reactionQueue?.length ||
+    ss.reactionIndex >= ss.reactionQueue.length
+  ) {
     ss.reaction = null;
     return;
   }
@@ -560,7 +567,8 @@ function getSelfOps(roomId, uid) {
   if (ss.phase === "discard" && ss.currentSeat === player.seat) {
     const hand = ss.handsByUid[player.uid] || [];
     const canCheng =
-      ss.laiziTypeIdx != null && hand.some((t) => t.typeIdx === ss.laiziTypeIdx);
+      ss.laiziTypeIdx != null &&
+      hand.some((t) => t.typeIdx === ss.laiziTypeIdx);
     const blockedOpenMeldHu = ss.pengNoHuUntilDiscardSeat === player.seat;
     const rawHu = !blockedOpenMeldHu && canSeatHu(ss, room, player.seat);
     const canHu = rawHu && ss.huPassSkipSeat !== player.seat;
@@ -615,6 +623,11 @@ function applyDiscard(roomId, uid, tileId) {
   const [discardTile] = hand.splice(i, 1);
   if (!ss.discardsBySeat[actor.seat]) ss.discardsBySeat[actor.seat] = [];
   ss.discardsBySeat[actor.seat].push(discardTile);
+  if (ss.laiziTypeIdx != null && discardTile.typeIdx === ss.laiziTypeIdx) {
+    ss.chengCountBySeat[actor.seat] =
+      (ss.chengCountBySeat[actor.seat] || 0) + 1;
+    ss.oilEligibleSeat = actor.seat;
+  }
 
   const reactionQueue = buildReactionQueue(room, actor.seat, discardTile);
   let drawnTile = null;
@@ -926,7 +939,8 @@ function applyReaction(roomId, uid, action, options = {}) {
     };
   }
 
-  if (ss.phase !== "react" || !ss.reactionQueue?.length) return { error: "E_INVALID_PHASE" };
+  if (ss.phase !== "react" || !ss.reactionQueue?.length)
+    return { error: "E_INVALID_PHASE" };
   const cur = ss.reactionQueue[ss.reactionIndex];
   if (!cur || cur.uid !== uid) return { error: "E_INVALID_ACTION" };
 
@@ -1220,4 +1234,3 @@ module.exports = {
   runBotAutoTurns,
   runOneBotTurn,
 };
-
